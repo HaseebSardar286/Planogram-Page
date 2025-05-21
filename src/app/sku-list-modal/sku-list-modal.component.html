@@ -1,0 +1,140 @@
+<div
+  class="modal fade"
+  [attr.id]="'SKUListModal' + index"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  [attr.aria-labelledby]="'SKUListModalLabel' + index"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-width">
+    <div class="modal-content">
+      <div
+        class="modal-header"
+        style="display: flex; flex-direction: row-reverse"
+      >
+        <button
+          type="button"
+          class="btn-close"
+          (click)="onCancel()"
+          aria-label="Close"
+        ></button>
+        <h3 class="modal-title" [attr.id]="'SKUListModalLabel' + index">
+          SKU List
+        </h3>
+      </div>
+      <div class="modal-body">
+        <div class="filter-controls searchBar">
+          <div class="filter-group">
+            <div class="dropdown" (click)="onToggleDropdown()">
+              <button
+                class="btn btn-secondary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {{ selectedStatus || "Filter by category" }}
+              </button>
+              <ul class="dropdown-menu" *ngIf="dropdownOpen">
+                <li>
+                  <a
+                    class="dropdown-item"
+                    (click)="onSelectStatus('Filter by category')"
+                    >Filter by category</a
+                  >
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" (click)="onSelectStatus('Nutrition')"
+                    >Nutrition</a
+                  >
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" (click)="onSelectStatus('Nesfruta')"
+                    >Nesfruta</a
+                  >
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" (click)="onSelectStatus('Juices')"
+                    >Juices</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="filter-group">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search SKU by name or description"
+              [(ngModel)]="searchQuery"
+              name="searchQuery"
+            />
+          </div>
+        </div>
+        <div class="sku-list-scrollable">
+          <table class="sku-table">
+            <thead>
+              <tr class="table-header">
+                <th class="select-col">Select</th>
+                <th>Icon</th>
+                <th style="width: 200px">Name</th>
+                <th>Category</th>
+                <th>Sku Id</th>
+                <th style="width: 400px">Description</th>
+                <th>Unit</th>
+                <th>HxWxD</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="table-content" *ngFor="let sku of getFilteredSKUs()">
+                <td class="select-col">
+                  <input
+                    type="radio"
+                    [attr.name]="'selectedSKU_' + index"
+                    (change)="onSelectSKU(sku.id)"
+                  />
+                </td>
+                <td>
+                  <img [src]="sku.imageUrl" alt="SKU Icon" class="sku-icon" />
+                </td>
+                <td class="text-ellipsis">{{ sku.name }}</td>
+                <td>{{ sku.category }}</td>
+                <td>{{ sku.skuId }}</td>
+                <td class="text-ellipsis">{{ sku.description }}</td>
+                <td>{{ sku.unit }}</td>
+                <td>{{ sku.dimensions }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="quantity-controls">
+          <label>Quantity:</label>
+          <input
+            type="number"
+            class="form-control quantity-input"
+            [(ngModel)]="selectedQuantity"
+            name="selectedQuantity"
+            min="1"
+            value="1"
+          />
+        </div>
+        <div class="buttons">
+          <button type="button" class="btn btn-cancel" (click)="onCancel()">
+            Cancel
+          </button>
+          <button
+            [attr.id]="'select-sku-btn-' + index"
+            type="button"
+            class="btn btn-primary"
+            (click)="onAddSKU()"
+          >
+            Select
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

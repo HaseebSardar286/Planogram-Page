@@ -1,0 +1,88 @@
+<div
+  class="modal fade"
+  [attr.id]="'shelfHeightModal' + index"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  [attr.aria-labelledby]="'shelfHeightModalLabel' + index"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; flex-direction: column">
+        <button
+          type="button"
+          class="btn-close"
+          (click)="onCancel()"
+          aria-label="Close"
+        ></button>
+        <h3
+          class="modal-title fs-5"
+          [attr.id]="'shelfHeightModalLabel' + index"
+        >
+          Set Shelf Height
+        </h3>
+        <p>Adjust the height of your shelf</p>
+      </div>
+      <div class="modal-body">
+        <div class="label-input">
+          <span>Shelf Height</span>
+          <div class="rack">
+            <input
+              type="number"
+              name="shelfHeight"
+              placeholder="100"
+              [(ngModel)]="shelfHeightInput"
+              class="rack-width form-control"
+            />
+            <div class="dropdown-rack-width" (click)="onToggleDropdown()">
+              <button class="btn btn-secondary-rack-width" type="button">
+                {{ selectedStatusRackHeight || "cm" }}
+              </button>
+              <ul
+                class="dropdown-menu-rack-width"
+                *ngIf="dropdownOpenRackHeight"
+              >
+                <li>
+                  <a
+                    class="dropdown-item-rack-width"
+                    (click)="onSelectUnit('cm')"
+                    >cm</a
+                  >
+                </li>
+                <hr class="dropdown-divider-rack-width" />
+                <li>
+                  <a
+                    class="dropdown-item-rack-width"
+                    (click)="onSelectUnit('in')"
+                    >in</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div style="display: flex">
+            <input
+              type="checkbox"
+              name="applyToAll"
+              [(ngModel)]="applyToAll"
+              class="form-check-input mt-0 checkbox"
+            />
+            <p style="font-size: 13px; margin-left: 15px; margin-top: -3px">
+              Apply to All Shelves
+            </p>
+          </div>
+        </div>
+        <hr class="divider" />
+        <div class="buttons">
+          <button type="button" class="btn btn-cancel" (click)="onCancel()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" (click)="onSave()">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

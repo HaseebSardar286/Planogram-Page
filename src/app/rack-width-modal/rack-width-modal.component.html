@@ -1,0 +1,74 @@
+<div
+  class="modal fade"
+  id="rackWidthModal"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  aria-labelledby="rackWidthModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; flex-direction: column">
+        <button
+          type="button"
+          class="btn-close"
+          (click)="onCancel()"
+          aria-label="Close"
+        ></button>
+        <h3 class="modal-title fs-5" id="rackWidthModalLabel">
+          Set Rack Width
+        </h3>
+        <p>Define the width of your rack in CM or Inches</p>
+      </div>
+      <div class="modal-body">
+        <div class="label-input">
+          <span>Rack Width</span>
+          <div class="rack">
+            <input
+              type="number"
+              name="rackWidth"
+              placeholder="100"
+              [(ngModel)]="rackWidthCm"
+              class="rack-width form-control"
+            />
+            <div class="dropdown-rack-width" (click)="onToggleDropdown()">
+              <button class="btn btn-secondary-rack-width" type="button">
+                {{ selectedStatusRackWidth || "cm" }}
+              </button>
+              <ul
+                class="dropdown-menu-rack-width"
+                *ngIf="dropdownOpenRackWidth"
+              >
+                <li>
+                  <a
+                    class="dropdown-item-rack-width"
+                    (click)="onSelectUnit('cm')"
+                    >cm</a
+                  >
+                </li>
+                <hr class="dropdown-divider-rack-width" />
+                <li>
+                  <a
+                    class="dropdown-item-rack-width"
+                    (click)="onSelectUnit('in')"
+                    >in</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <hr class="divider" />
+        <div class="buttons">
+          <button type="button" class="btn btn-cancel" (click)="onCancel()">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" (click)="onSave()">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
