@@ -19,7 +19,7 @@ import { RackWidthModalComponent } from '../rack-width-modal/rack-width-modal.co
 import { ShelfHeightModalComponent } from '../shelf-height-modal/shelf-height-modal.component';
 import { SKUListModalComponent } from '../sku-list-modal/sku-list-modal.component';
 import { NewShelfModalComponent } from '../new-shelf-modal/new-shelf-modal.component';
-
+import html2canvas from 'html2canvas';
 @Component({
   selector: 'app-planogram-editor',
   standalone: true,
@@ -749,5 +749,64 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     };
   }
 
-  downloadPlanogram() {}
+  async downloadPlanogram(): Promise<void> {
+    const canvasContainers = document.querySelectorAll('.canvas-container');
+    if (canvasContainers.length === 0) {
+      alert('No planogram shelves to download.');
+      return;
+    }
+
+    // Add downloading class to hide interactive elements
+    canvasContainers.forEach((container) =>
+      container.classList.add('downloading')
+    );
+
+    try {
+      // Calculate total dimensions
+      let totalHeight = 0;
+      let maxWidth = 0;
+      const canvases: HTMLCanvasElement[] = [];
+
+      // Capture each canvas-container as a canvas
+      for (const container of Array.from(canvasContainers)) {
+        const canvas = await html2canvas(container as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        });
+        totalHeight += canvas.height;
+        maxWidth = Math.max(maxWidth, canvas.width);
+        canvases.push(canvas);
+      }
+
+      // Create a single canvas to combine all shelves
+      const combinedCanvas = document.createElement('canvas');
+      combinedCanvas.width = maxWidth;
+      combinedCanvas.height = totalHeight;
+      const ctx = combinedCanvas.getContext('2d');
+
+      if (!ctx) {
+        alert('Failed to create canvas context.');
+        return;
+      }
+
+      // Draw each canvas onto the combined canvas
+      let currentY = 0;
+      for (const canvas of canvases) {
+        ctx.drawImage(canvas, 0, currentY);
+        currentY += canvas.height;
+      }
+
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `planogram-${this.title || 'untitled'}-${Date.now()}.png`;
+      link.href = combinedCanvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      // Remove downloading class
+      canvasContainers.forEach((container) =>
+        container.classList.remove('downloading')
+      );
+    }
+  }
 }
