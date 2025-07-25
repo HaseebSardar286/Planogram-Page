@@ -1,0 +1,27 @@
+.avatar {
+  background-color: rgb(143, 193, 240);
+  margin-right: 10px;
+}
+.card {
+  display: flex;
+  border: 0.5px solid rgb(209, 209, 209);
+  width: 96%;
+  border-radius: 5px;
+  margin-top: 5px;
+  justify-content: space-between;
+  flex-direction: row;
+  padding: 5px;
+  height: 70px;
+}
+.card:hover {
+  border-color: rgb(20, 180, 255);
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dimensions {
+  font-size: 12px;
+}

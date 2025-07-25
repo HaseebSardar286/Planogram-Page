@@ -17,11 +17,20 @@ export class PlanogramComponent implements OnInit {
   searchQuery: string = '';
   selectedStatus: string = 'All Status';
   selectedStatusRackWidth: string = 'cm';
-  dropdownOpen = false;
-  dropdownOpenRackWidth = false;
+  selectedStatusRackHeight: string = 'cm';
+  dropdownOpen: boolean = false;
+  dropdownOpenRackWidth: boolean = false;
   title: string = '';
-  rackWidth: number = 20;
+  rackWidth: number = 50;
+  rackHeight: number = 50;
   planograms: Planogram[] = [];
+  selectedCategory: string = '';
+  selectedShop: string = '';
+  selectedChannel: string = '';
+  dropdownOpenCategory: boolean = false;
+  dropdownOpenChannel: boolean = false;
+  dropdownOpenRackHeight: boolean = false;
+  dropdownOpenShop: boolean = false;
 
   constructor(
     private router: Router,
@@ -48,9 +57,23 @@ export class PlanogramComponent implements OnInit {
     this.selectedStatus = status;
   }
 
+  selectCategory(category: string) {
+    this.selectedCategory = category;
+  }
+  selectChannel(category: string) {
+    this.selectedChannel = category;
+  }
+  selectShop(category: string) {
+    this.selectedShop = category;
+  }
   selectStatusRackWidth(status: string) {
     this.selectedStatusRackWidth = status;
     this.dropdownOpenRackWidth = false;
+  }
+
+  selectStatusRackHeight(status: string) {
+    this.selectedStatusRackHeight = status;
+    this.dropdownOpenRackHeight = false;
   }
 
   toggleDropDown() {
@@ -61,13 +84,46 @@ export class PlanogramComponent implements OnInit {
     this.dropdownOpenRackWidth = !this.dropdownOpenRackWidth;
   }
 
+  toggleDropDownCategory() {
+    this.dropdownOpenCategory = !this.dropdownOpenCategory;
+  }
+
+  toggleDropDownChannel() {
+    this.dropdownOpenChannel = !this.dropdownOpenChannel;
+  }
+
+  toggleDropDownShop() {
+    this.dropdownOpenShop = !this.dropdownOpenShop;
+  }
+
+  toggleDropDownRackHeight() {
+    this.dropdownOpenRackHeight = !this.dropdownOpenRackHeight;
+  }
+
   planogramEditor() {
     if (!this.title.trim()) {
       alert('Please enter a planogram title.');
       return;
     }
-    if (this.rackWidth <= 0 || isNaN(this.rackWidth)) {
+    if (!this.selectedCategory) {
+      alert('Please select a category.');
+      return;
+    }
+    if (!this.selectedChannel) {
+      alert('Please select a channel.');
+      return;
+    }
+    if (!this.selectedShop) {
+      alert('Please select a shop.');
+      return;
+    }
+    if (!this.rackWidth || this.rackWidth <= 0 || isNaN(this.rackWidth)) {
       alert('Please enter a valid rack width.');
+      return;
+    }
+
+    if (!this.rackHeight || this.rackHeight <= 0 || isNaN(this.rackHeight)) {
+      alert('Please enter a valid rack height.');
       return;
     }
 
@@ -76,8 +132,20 @@ export class PlanogramComponent implements OnInit {
         ? this.rackWidth * 2.54
         : this.rackWidth;
 
+    let rackHeightInCm =
+      this.selectedStatusRackHeight === 'in'
+        ? this.rackHeight * 2.54
+        : this.rackHeight;
+
     this.router.navigate(['/planogram-editor'], {
-      state: { title: this.title, rackWidth: rackWidthInCm },
+      state: {
+        title: this.title,
+        rackWidth: rackWidthInCm,
+        rackHeight: rackHeightInCm,
+        selectedCategory: this.selectedCategory,
+        selectedShop: this.selectedShop,
+        selectedChannel: this.selectedChannel,
+      },
     });
 
     const modalElement = document.getElementById('staticBackdrop');
@@ -91,8 +159,10 @@ export class PlanogramComponent implements OnInit {
     }
 
     this.title = '';
-    this.rackWidth = 100;
+    this.rackWidth = rackWidthInCm;
     this.selectedStatusRackWidth = 'cm';
+    this.rackHeight = rackHeightInCm;
+    this.selectedStatusRackHeight = 'cm';
   }
 
   editPlanogram(planogram: Planogram) {

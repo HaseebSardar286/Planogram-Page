@@ -1,0 +1,45 @@
+<!-- @for (project of projectDetails; track project.id) {
+<div class="card">
+  <div class="avatar">
+    {{ project.name.charAt(0).toUpperCase() }}
+  </div>
+  <div>
+    <p class="name" (click)="selectProject(project)">{{ project.name }}</p>
+    <p class="name">{{ project.description }}</p>
+  </div>
+  <button (click)="deleteProject(project.id)">Delete</button>
+  <div *ngIf="!projectDetails">
+    <p>No project data available.</p>
+  </div>
+</div>
+} -->
+<!-- <div class="card">
+  <div>
+    <p class="name">Item name</p>
+    <p class="dimensions">Dimensions</p>
+  </div>
+  <div class="avatar">
+    <img
+      src=""
+      alt=""
+      draggable="true"
+      (dragstart)="onDragStart($event, image)"
+    />
+  </div>
+</div> -->
+
+<div *ngFor="let sku of skus" class="card">
+  <div>
+    <p class="name">{{ sku.name }}</p>
+    <p class="dimensions">{{ sku.dimensions }} {{ sku.unit }}</p>
+  </div>
+  <div class="avatar">
+    <img
+      [src]="sku.imageUrl"
+      alt="{{ sku.name }}"
+      draggable="true"
+      (dragstart)="onDragStart($event, sku)"
+      style="width: 100%; height: 100%"
+    />
+  </div>
+</div>

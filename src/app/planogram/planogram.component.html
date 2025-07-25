@@ -8,6 +8,8 @@
         aria-label="Search"
       />
     </form>
+
+    <!-- Status DropDown -->
     <div class="dropdown" (click)="toggleDropDown()">
       <div class="btn-group">
         <button
@@ -47,6 +49,7 @@
     </div>
   </div>
 
+  <!-- Create Planogram Button Modal -->
   <button
     type="button"
     class="btn btn-primary button"
@@ -56,7 +59,7 @@
     Create Planogram
   </button>
   <div
-    class="modal fade"
+    class="modal fade custom-modal"
     id="staticBackdrop"
     data-bs-backdrop="static"
     data-bs-keyboard="false"
@@ -89,6 +92,127 @@
             />
           </div>
 
+          <!-- Category DropDown -->
+          <div class="label-input">
+            <span><span style="color: red">*</span>Category</span>
+            <div class="btn-group" (click)="toggleDropDownCategory()">
+              <button
+                class="btn btn-secondary-category btn-sm dropdown-toggle"
+                type="button"
+                aria-expanded="false"
+              >
+                {{ selectedCategory || "Select a Food Category" }}
+              </button>
+              <ul class="dropdown-menu-category" *ngIf="dropdownOpenCategory">
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectCategory('Juices')"
+                    >Juices</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectCategory('Milo')"
+                    >Milo</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectCategory('Nutrition')"
+                    >Nutrition</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Channel DropDown -->
+          <div class="label-input">
+            <span><span style="color: red">*</span>Channel</span>
+            <div class="btn-group" (click)="toggleDropDownChannel()">
+              <button
+                class="btn btn-secondary-category btn-sm dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {{ selectedChannel || "Select Channels" }}
+              </button>
+              <ul class="dropdown-menu-category" *ngIf="dropdownOpenChannel">
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectChannel('Small General Store')"
+                    >Small General Store</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectChannel('Tobbaco Kiosk')"
+                    >Tobbaco Kiosk</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectChannel('Petromart')"
+                    >Petromart</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Shop DropDown -->
+          <div class="label-input">
+            <span><span style="color: red">*</span>Shop</span>
+            <div class="btn-group" (click)="toggleDropDownShop()">
+              <button
+                class="btn btn-secondary-category btn-sm dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {{ selectedShop || "Select Shops" }}
+              </button>
+              <ul class="dropdown-menu-category" *ngIf="dropdownOpenShop">
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectShop('Malik Kiryana Store')"
+                  >
+                    Malik Kiryana Store</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectShop('Glorious Store')"
+                    >Glorious Store</a
+                  >
+                </li>
+                <hr class="dropdown-divider" />
+                <li>
+                  <a
+                    class="dropdown-item-category"
+                    (click)="selectShop('Ali Store')"
+                    >Ali Store</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Rack Width DropDwon -->
           <div class="label-input">
             <span><span style="color: red">*</span>Rack Width</span>
             <div class="rack">
@@ -129,6 +253,49 @@
               </div>
             </div>
           </div>
+
+          <!-- Rack Height DropDwon -->
+          <div class="label-input">
+            <span><span style="color: red">*</span>Rack Height</span>
+            <div class="rack">
+              <input
+                type="number"
+                name="rackHeight"
+                placeholder="100"
+                [(ngModel)]="rackHeight"
+                class="rack-width form-control"
+              />
+              <div
+                class="dropdown-rack-width"
+                (click)="toggleDropDownRackHeight()"
+              >
+                <button class="btn btn-secondary-rack-width" type="button">
+                  {{ selectedStatusRackHeight || "cm" }}
+                </button>
+                <ul
+                  class="dropdown-menu-rack-width"
+                  *ngIf="dropdownOpenRackHeight"
+                >
+                  <li>
+                    <a
+                      class="dropdown-item-rack-width"
+                      (click)="selectStatusRackHeight('cm')"
+                      >cm</a
+                    >
+                  </li>
+                  <hr class="dropdown-divider-rack-width" />
+                  <li>
+                    <a
+                      class="dropdown-item-rack-width"
+                      (click)="selectStatusRackHeight('in')"
+                      >in</a
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <hr class="divider" />
           <div class="buttons">
             <button

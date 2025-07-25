@@ -1,261 +1,188 @@
-<div class="scrollable">
-  <div class="nav-container">
-    <div>
-      <button
-        id="go-back-btn"
-        class="btn btn-primary"
-        (click)="goBackToPlanogram()"
-      >
-        <fa-icon [icon]="faArrowLeft"></fa-icon> Go Back
-      </button>
-    </div>
-    <div class="title">{{ title }}</div>
-    <div>
-      <button
-        id="download-planogram-btn"
-        type="button"
-        class="btn btn-primary"
-        (click)="downloadPlanogram()"
-      >
-        <fa-icon [icon]="faDownload"></fa-icon> Download
-      </button>
-      <button
-        id="save-planogram-btn"
-        class="btn btn-danger"
-        style="background-color: #ee2e54ed"
-        (click)="savePlanogram()"
-      >
-        <fa-icon [icon]="faSave"></fa-icon> Save
-      </button>
-      <button
-        id="edit-rack-btn"
-        type="button"
-        class="btn btn-primary button"
-        (click)="openModal('rackWidthModal')"
-      >
-        <fa-icon [icon]="faEdit"></fa-icon> Edit Rack
-      </button>
-    </div>
+<div class="editor-layout">
+  <div class="sidebar">
+    <app-sku-library-sidebar [skus]="skus"></app-sku-library-sidebar>
   </div>
+  <div class="editor-content">
+    <div class="top-container">
+      <div class="nav-container">
+        <div class="title">{{ title }}</div>
+        <div>
+          <button
+            id="download-planogram-btn"
+            type="button"
+            class="btn btn-primary"
+            (click)="downloadPlanogram()"
+          >
+            <fa-icon [icon]="faDownload"></fa-icon> Export Image
+          </button>
+          <button
+            id="save-planogram-btn"
+            class="btn btn-primary"
+            (click)="savePlanogram()"
+          >
+            <fa-icon [icon]="faSave"></fa-icon> Save
+          </button>
+          <button
+            id="edit-rack-btn"
+            type="button"
+            class="btn btn-primary button"
+            (click)="openModal('rackWidthModal')"
+          >
+            <fa-icon [icon]="faEdit"></fa-icon> Edit Rack
+          </button>
+        </div>
+      </div>
 
-  <app-rack-width-modal
-    [rackWidthCm]="rackWidthCm"
-    [selectedStatusRackWidth]="selectedStatusRackWidth"
-    [dropdownOpenRackWidth]="dropdownOpenRackWidth"
-    (save)="saveRackWidth($event)"
-    (cancel)="closeModal('rackWidthModal')"
-    (toggleDropdown)="toggleDropDownRackWidth()"
-    (selectUnit)="selectStatusRackWidth($event)"
-  ></app-rack-width-modal>
+      <hr />
 
-  <div *ngFor="let canvas of canvases; let i = index" class="canvas-wrapper">
-    <div class="add-canvas" *ngIf="i === 0">
-      <button
-        type="button"
-        class="btn btn-outline-dark btn-sm"
-        (click)="addCanvas('above', i)"
-      >
-        <fa-icon [icon]="faPlus"></fa-icon> Add Shelf Above
-      </button>
-    </div>
+      <app-rack-width-modal
+        [rackWidthCm]="rackWidthCm"
+        [selectedStatusRackWidth]="selectedStatusRackWidth"
+        [dropdownOpenRackWidth]="dropdownOpenRackWidth"
+        (save)="saveRackWidth($event)"
+        (cancel)="closeModal('rackWidthModal')"
+        (toggleDropdown)="toggleDropDownRackWidth()"
+        (selectUnit)="selectStatusRackWidth($event)"
+      ></app-rack-width-modal>
 
-    <div
-      class="canvas-container"
-      [style.width.px]="canvas.width"
-      [style.height.px]="canvas.height"
-    >
-      <button
-        type="button"
-        class="btn btn-primary shelf-height-btn"
-        (click)="openShelfHeightModal(i)"
-      >
-        <fa-icon [icon]="faEdit"></fa-icon>
-      </button>
+      <div class="canvas-scroll-area">
+        <ng-container *ngFor="let canvas of canvases; let i = index">
+          <div class="canvas-wrapper">
+            <div class="add-canvas" *ngIf="i === 0">
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                (click)="addCanvas('above', i)"
+              >
+                <fa-icon [icon]="faPlus"></fa-icon> Add Shelf Above
+              </button>
+            </div>
 
-      <app-shelf-height-modal
+            <div
+              class="canvas-container"
+              [style.width.px]="canvas.width"
+              [style.height.px]="canvas.height"
+              (drop)="onDrop($event, i)"
+              (dragover)="onDragOver($event, i)"
+            >
+              <button
+                type="button"
+                class="btn btn-primary shelf-height-btn"
+                (click)="openShelfHeightModal(i)"
+              >
+                <fa-icon [icon]="faEdit"></fa-icon>
+              </button>
+
+              <app-shelf-height-modal
+                [shelfHeightInput]="shelfHeightInput"
+                [selectedStatusRackHeight]="selectedStatusRackHeight"
+                [applyToAll]="applyToAll"
+                [index]="i"
+                [dropdownOpenRackHeight]="dropdownOpenRackHeight"
+                (save)="saveShelfHeight($event)"
+                (cancel)="closeModal('shelfHeightModal' + i)"
+                (toggleDropdown)="toggleDropDownRackHeight()"
+                (selectUnit)="selectStatusRackHeight($event)"
+              ></app-shelf-height-modal>
+
+              <div
+                class="sku-top-container"
+                *ngIf="canvas.topSkus && canvas.topSkus.length > 0"
+              >
+                <div
+                  *ngFor="let sku of canvas.topSkus; let skuIndex = index"
+                  class="sku-item"
+                  [ngStyle]="{
+                    'left.px': sku.xPosition,
+                    'bottom.px': sku.yPosition || 0,
+                    'z-index': canvas.topSkus.length - skuIndex
+                  }"
+                >
+                  <div class="sku-image-wrapper">
+                    <img
+                      [src]="sku.imageUrl"
+                      [alt]="sku.name"
+                      [style.width.px]="getSKUDimensions(sku).width"
+                      [style.height.px]="getSKUDimensions(sku).height"
+                      (click)="removeSKU(i, skuIndex, 'top')"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right SKU Container -->
+              <div
+                class="sku-right-container"
+                *ngIf="canvas.rightSkus && canvas.rightSkus.length > 0"
+              >
+                <div
+                  *ngFor="let sku of canvas.rightSkus; let skuIndex = index"
+                  class="sku-item"
+                  [style.left.px]="sku.xPosition"
+                  [style.zIndex]="skuIndex"
+                >
+                  <div class="sku-image-wrapper">
+                    <img
+                      [src]="sku.imageUrl"
+                      [alt]="sku.name"
+                      [style.width.px]="getSKUDimensions(sku).width"
+                      [style.height.px]="getSKUDimensions(sku).height"
+                      (click)="removeSKU(i, skuIndex, 'right')"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style="width: 100%; display: flex; justify-content: end">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm btn-duplicate"
+                  (click)="duplicateCanvas(i)"
+                >
+                  <fa-icon [icon]="faCopy"></fa-icon>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm btn-delete"
+                  (click)="deleteCanvas(i)"
+                >
+                  <fa-icon [icon]="faTrash"></fa-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="add-canvas" *ngIf="i === canvases.length - 1">
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                (click)="addCanvas('below', i)"
+              >
+                <fa-icon [icon]="faPlus"></fa-icon> Add Shelf Below
+              </button>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="add-canvas" *ngIf="canvases.length === 0">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          (click)="openNewShelfModal()"
+        >
+          <fa-icon [icon]="faPlus"></fa-icon> Add Shelf
+        </button>
+      </div>
+
+      <app-new-shelf-modal
         [shelfHeightInput]="shelfHeightInput"
         [selectedStatusRackHeight]="selectedStatusRackHeight"
-        [applyToAll]="applyToAll"
-        [index]="i"
         [dropdownOpenRackHeight]="dropdownOpenRackHeight"
-        (save)="saveShelfHeight($event)"
-        (cancel)="closeModal('shelfHeightModal' + i)"
+        (save)="addNewCanvasWithHeight($event)"
+        (cancel)="closeModal('newShelfModal')"
         (toggleDropdown)="toggleDropDownRackHeight()"
         (selectUnit)="selectStatusRackHeight($event)"
-      ></app-shelf-height-modal>
-
-      <!-- Top SKU Container: Newest SKUs have highest z-index -->
-      <div
-        class="sku-top-container"
-        *ngIf="canvas.topSkus && canvas.topSkus.length > 0"
-      >
-        <div
-          *ngFor="let sku of canvas.topSkus; let skuIndex = index"
-          class="sku-item"
-          [ngStyle]="{
-            'left.px': sku.xPosition,
-            'bottom.px': sku.yPosition || 0,
-            'z-index': canvas.topSkus.length - skuIndex
-          }"
-        >
-          <div class="sku-image-wrapper">
-            <img
-              [src]="sku.imageUrl"
-              [alt]="sku.name"
-              [style.width.px]="getSKUDimensions(sku).width"
-              [style.height.px]="getSKUDimensions(sku).height"
-            />
-            <div class="sku-buttons">
-              <button
-                type="button"
-                class="btn btn-primary btn-sm sku-button add-top"
-                (click)="openSKUListModal(i, 'top', skuIndex)"
-              >
-                <fa-icon [icon]="faPlus"></fa-icon>
-              </button>
-              <button
-                type="button"
-                class="btn btn-danger btn-sm sku-button remove"
-                (click)="removeSKU(i, skuIndex, 'top')"
-              >
-                <fa-icon [icon]="faTrash"></fa-icon>
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm sku-button add-right"
-                (click)="openSKUListModal(i, 'right', skuIndex)"
-              >
-                <fa-icon [icon]="faPlus"></fa-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right SKU Container -->
-      <div
-        class="sku-right-container"
-        *ngIf="canvas.rightSkus && canvas.rightSkus.length > 0"
-      >
-        <div
-          *ngFor="let sku of canvas.rightSkus; let skuIndex = index"
-          class="sku-item"
-          [style.left.px]="sku.xPosition"
-          [style.zIndex]="skuIndex"
-        >
-          <div class="sku-image-wrapper">
-            <img
-              [src]="sku.imageUrl"
-              [alt]="sku.name"
-              [style.width.px]="getSKUDimensions(sku).width"
-              [style.height.px]="getSKUDimensions(sku).height"
-            />
-            <div class="sku-buttons">
-              <button
-                type="button"
-                class="btn btn-primary btn-sm sku-button add-top"
-                (click)="openSKUListModal(i, 'top', skuIndex)"
-              >
-                <fa-icon [icon]="faPlus"></fa-icon>
-              </button>
-              <button
-                type="button"
-                class="btn btn-danger btn-sm sku-button remove"
-                (click)="removeSKU(i, skuIndex, 'right')"
-              >
-                <fa-icon [icon]="faTrash"></fa-icon>
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm sku-button add-right"
-                (click)="openSKUListModal(i, 'right', skuIndex)"
-              >
-                <fa-icon [icon]="faPlus"></fa-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="btn-add-sku"
-        *ngIf="
-          !(canvas.rightSkus && canvas.rightSkus.length > 0) &&
-          !(canvas.topSkus && canvas.topSkus.length > 0)
-        "
-      >
-        <button
-          [attr.id]="'add-sku-btn-' + i"
-          type="button"
-          class="btn btn-primary"
-          (click)="openSKUListModal(i, 'right')"
-        >
-          <fa-icon [icon]="faPlus"></fa-icon>
-        </button>
-      </div>
-
-      <app-sku-list-modal
-        [skus]="skus"
-        [selectedSKU]="selectedSKU"
-        [selectedQuantity]="selectedQuantity"
-        [searchQuery]="searchQuery"
-        [selectedStatus]="selectedStatus"
-        [dropdownOpen]="dropdownOpen"
-        [index]="i"
-        [position]="canvas.tempPosition || 'right'"
-        (selectSKU)="selectSKU($event)"
-        (addSKU)="addSKU(i, $event)"
-        (cancel)="closeModal('SKUListModal' + i)"
-        (toggleDropdown)="toggleDropDown()"
-        (selectStatus)="selectStatus($event)"
-      ></app-sku-list-modal>
-
-      <div style="width: 100%; display: flex; justify-content: end">
-        <button
-          type="button"
-          class="btn btn-danger btn-sm btn-duplicate"
-          (click)="duplicateCanvas(i)"
-        >
-          <fa-icon [icon]="faCopy"></fa-icon>
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary btn-sm btn-delete"
-          (click)="deleteCanvas(i)"
-        >
-          <fa-icon [icon]="faTrash"></fa-icon>
-        </button>
-      </div>
-    </div>
-
-    <div class="add-canvas" *ngIf="i === canvases.length - 1">
-      <button
-        type="button"
-        class="btn btn-outline-dark btn-sm"
-        (click)="addCanvas('below', i)"
-      >
-        <fa-icon [icon]="faPlus"></fa-icon> Add Shelf Below
-      </button>
+      ></app-new-shelf-modal>
     </div>
   </div>
-
-  <div class="add-canvas add-shelf-empty" *ngIf="canvases.length === 0">
-    <button
-      type="button"
-      class="btn btn-primary btn-sm"
-      (click)="openNewShelfModal()"
-    >
-      <fa-icon [icon]="faPlus"></fa-icon> Add Shelf
-    </button>
-  </div>
-
-  <app-new-shelf-modal
-    [shelfHeightInput]="shelfHeightInput"
-    [selectedStatusRackHeight]="selectedStatusRackHeight"
-    [dropdownOpenRackHeight]="dropdownOpenRackHeight"
-    (save)="addNewCanvasWithHeight($event)"
-    (cancel)="closeModal('newShelfModal')"
-    (toggleDropdown)="toggleDropDownRackHeight()"
-    (selectUnit)="selectStatusRackHeight($event)"
-  ></app-new-shelf-modal>
 </div>

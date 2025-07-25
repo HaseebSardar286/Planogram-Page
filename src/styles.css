@@ -1,1 +1,57 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
+
+/* --- Shared Modal Styles --- */
+.custom-modal .modal-dialog {
+  max-width: 400px;
+  margin: 1.75rem auto;
+}
+.custom-modal .modal-content {
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  padding: 0;
+}
+.custom-modal .modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 1rem 1.5rem 0.5rem 1.5rem;
+  background: #fff;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+.custom-modal .modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0095ff;
+}
+.custom-modal .modal-body {
+  padding: 1.5rem;
+  background: #fff;
+}
+.custom-modal .divider {
+  margin: 10px 0 20px 0;
+  border: 0.2px solid #e7e4e4;
+}
+.custom-modal .buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 1rem;
+}
+.custom-modal .btn-cancel {
+  background: #fff;
+  color: #1a1919;
+  font-size: 14px;
+  width: 60px;
+  border: 0.5px solid #bfbfbf;
+  cursor: pointer;
+  border-radius: 5px;
+  text-align: center;
+  height: 30px;
+  transition: border 0.2s, color 0.2s;
+}
+.custom-modal .btn-cancel:hover {
+  border: 0.5px solid #188edc;
+  color: #188edc;
+}

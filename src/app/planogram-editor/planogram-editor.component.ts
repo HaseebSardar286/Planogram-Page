@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Modal } from 'bootstrap';
@@ -16,10 +15,11 @@ import {
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Canvas, SKU, Planogram } from '../interfaces/interfaces';
 import { RackWidthModalComponent } from '../rack-width-modal/rack-width-modal.component';
+import { SkuLibrarySidebarComponent } from '../sku-library-sidebar/sku-library-sidebar.component';
 import { ShelfHeightModalComponent } from '../shelf-height-modal/shelf-height-modal.component';
-import { SKUListModalComponent } from '../sku-list-modal/sku-list-modal.component';
 import { NewShelfModalComponent } from '../new-shelf-modal/new-shelf-modal.component';
 import html2canvas from 'html2canvas';
+
 @Component({
   selector: 'app-planogram-editor',
   standalone: true,
@@ -30,8 +30,8 @@ import html2canvas from 'html2canvas';
     FontAwesomeModule,
     CommonModule,
     RackWidthModalComponent,
+    SkuLibrarySidebarComponent,
     ShelfHeightModalComponent,
-    SKUListModalComponent,
     NewShelfModalComponent,
   ],
   templateUrl: './planogram-editor.component.html',
@@ -47,9 +47,9 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   faDownload = faDownload;
 
   title: string = '';
-  rackWidthCm: number = 20;
-  rackWidthPx: number = 3780;
-  rackHeight: number = 10;
+  rackWidthCm: number = 40;
+  rackWidthPx: number = 0;
+  rackHeight: number = 0;
   canvases: Canvas[] = [];
   selectedStatusRackHeight: 'cm' | 'in' = 'cm';
   selectedStatusRackWidth: 'cm' | 'in' = 'cm';
@@ -59,10 +59,11 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   applyToAll: boolean = false;
   planogramId: number | null = null;
   selectedStatus: string = '';
-  dropdownOpen = false;
+  dropdownOpen: boolean = false;
   selectedSKU: string | null = null;
   searchQuery: string = '';
   selectedQuantity: number = 1;
+  scaleFactor: number = 1; // Pixels per cm, reduced by 5x
 
   skus: SKU[] = [
     {
@@ -72,8 +73,8 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '52',
       description: 'Premium infant formula for newborns',
       unit: 'cm',
-      dimensions: '3 | 2',
-      imageUrl: 'images/abc.jpeg',
+      dimensions: '4.5 | 11.8',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
     {
@@ -83,8 +84,8 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '53',
       description: 'High protein nutrition shake',
       unit: 'cm',
-      dimensions: '3 | 2',
-      imageUrl: 'images/images.jpeg',
+      dimensions: '6 | 21',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
     {
@@ -93,9 +94,9 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       category: 'Nesfruta',
       skuId: '54',
       description: 'Mango flavored fruit drink',
-      unit: 'in',
-      dimensions: '2 | 1',
-      imageUrl: 'images/download.jpeg',
+      unit: 'cm',
+      dimensions: '4.5 | 11.8',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
     {
@@ -104,9 +105,9 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       category: 'Nesfruta',
       skuId: '55',
       description: 'Orange flavored fruit drink',
-      unit: 'in',
-      dimensions: '3 | 1',
-      imageUrl: 'images/abc.jpeg',
+      unit: 'cm',
+      dimensions: '4.5 | 11.8',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
     {
@@ -115,9 +116,9 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       category: 'Juices',
       skuId: '56',
       description: '100% pure apple juice',
-      unit: 'in',
-      dimensions: '1 | 1',
-      imageUrl: 'images/download.jpeg',
+      unit: 'cm',
+      dimensions: '4.5 | 11.8',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
     {
@@ -126,15 +127,14 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       category: 'Juices',
       skuId: '57',
       description: 'Fresh squeezed orange juice',
-      unit: 'in',
-      dimensions: '2 | 1',
-      imageUrl: 'images/images.jpeg',
+      unit: 'cm',
+      dimensions: '4.5 | 11.8',
+      imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
   ];
 
   constructor(
-    private router: Router,
     private planogramService: PlanogramService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -147,9 +147,12 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       id?: number;
     };
     this.title = state.title ?? '';
-    this.rackWidthCm = state.rackWidth ?? 20;
-    this.rackHeight = state.height ?? 300;
+    this.rackWidthCm = state.rackWidth ?? 50;
+    this.shelfHeightInput = state.height ?? 500;
+    this.rackHeight = this.convertCmToPx(this.shelfHeightInput);
     this.planogramId = state.id ?? null;
+
+    this.updateScaleFactor();
     this.rackWidthPx = this.convertCmToPx(this.rackWidthCm);
 
     this.canvases.push({
@@ -158,6 +161,12 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       height: this.rackHeight,
       topSkus: [],
       rightSkus: [],
+    });
+
+    window.addEventListener('resize', () => {
+      this.updateScaleFactor();
+      this.updateCanvasDimensions();
+      this.cdr.detectChanges();
     });
   }
 
@@ -169,14 +178,208 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
         this.backdropRemover();
       }
     });
+    window.removeEventListener('resize', () => {});
+  }
+
+  private updateScaleFactor(): void {
+    const maxCanvasWidth = window.innerWidth * 1;
+    this.scaleFactor = Math.max(10, maxCanvasWidth / this.rackWidthCm / 5); // Prevent overly large scaleFactor
+    console.log(`Scale factor updated: ${this.scaleFactor} px/cm`);
+  }
+
+  private updateCanvasDimensions(): void {
+    this.rackWidthPx = this.convertCmToPx(this.rackWidthCm);
+    this.rackHeight = this.convertCmToPx(this.shelfHeightInput);
+    this.canvases.forEach((canvas, index) => {
+      canvas.width = this.rackWidthPx;
+      canvas.height = this.rackHeight;
+      this.recalculateRightSkuPositions(index);
+      const affectedXPositions = [
+        ...new Set(canvas.topSkus.map((s) => s.xPosition ?? 0)),
+      ];
+      affectedXPositions.forEach((xPos) =>
+        this.recalculateTopSkuPositions(index, xPos)
+      );
+    });
+    console.log(
+      `Canvas dimensions updated: width=${this.rackWidthPx}px, height=${this.rackHeight}px`
+    );
   }
 
   convertCmToPx(cm: number): number {
-    return cm * 37.8;
+    return cm * this.scaleFactor;
   }
 
   convertInToPx(inches: number): number {
-    return inches * 96;
+    return inches * 2.54 * this.scaleFactor;
+  }
+
+  onDragOver(event: DragEvent, canvasIndex: number) {
+    event.preventDefault();
+  }
+
+  onDrop(event: DragEvent, canvasIndex: number) {
+    event.preventDefault();
+    const data = event.dataTransfer?.getData('application/json');
+    if (!data) {
+      console.warn('No SKU data found in drag event');
+      return;
+    }
+
+    let sku: SKU;
+    try {
+      sku = JSON.parse(data);
+    } catch (error) {
+      console.error('Error parsing SKU data:', error);
+      return;
+    }
+
+    const canvas = this.canvases[canvasIndex];
+    if (!canvas) {
+      console.warn(`Invalid canvas index: ${canvasIndex}`);
+      return;
+    }
+
+    const canvasElement = event.currentTarget as HTMLElement;
+    const canvasRect = canvasElement.getBoundingClientRect();
+    const dropX = event.clientX - canvasRect.left;
+    const dropY = event.clientY - canvasRect.top;
+    console.log(`Drop: dropX=${dropX}, dropY=${dropY}`);
+
+    const newSku: SKU = {
+      ...sku,
+      quantity: this.selectedQuantity, // Use selectedQuantity from sidebar
+      xPosition: 0,
+      yPosition: 0,
+    };
+
+    const newSkuDims = this.getSKUDimensions(newSku);
+    const tolerance = 20;
+
+    let baseXPosition: number | null = null;
+    let baseYPosition = 0;
+    const rightSkus = canvas.rightSkus || [];
+
+    for (const rightSku of rightSkus) {
+      const dims = this.getSKUDimensions(rightSku);
+      const rightX = rightSku.xPosition ?? 0;
+      if (
+        dropX >= rightX - tolerance &&
+        dropX <= rightX + dims.width + tolerance
+      ) {
+        baseXPosition = rightX;
+        baseYPosition = dims.height * (rightSku.quantity ?? 1);
+        break;
+      }
+    }
+
+    if (baseXPosition === null) {
+      const topSkus = canvas.topSkus || [];
+      for (const topSku of topSkus) {
+        const dims = this.getSKUDimensions(topSku);
+        const topX = topSku.xPosition ?? 0;
+        if (
+          dropX >= topX - tolerance &&
+          dropX <= topX + dims.width + tolerance
+        ) {
+          baseXPosition = topX;
+          break;
+        }
+      }
+    }
+
+    if (baseXPosition !== null && dropY >= baseYPosition - tolerance) {
+      let stackingHeight = 0;
+      const stackedTopSkus = canvas.topSkus.filter(
+        (s) => (s.xPosition ?? 0) === baseXPosition
+      );
+      for (const s of stackedTopSkus) {
+        const dims = this.getSKUDimensions(s);
+        stackingHeight += dims.height * (s.quantity ?? 1);
+      }
+
+      newSku.xPosition = baseXPosition;
+      newSku.yPosition = baseYPosition + stackingHeight;
+
+      if (
+        newSku.yPosition + newSkuDims.height * newSku.quantity >
+        canvas.height
+      ) {
+        console.warn(
+          `Cannot add top SKU: Total height=${
+            newSku.yPosition + newSkuDims.height * newSku.quantity
+          }px exceeds canvas height=${canvas.height}px`
+        );
+        alert('Cannot add top SKU: Total height would exceed canvas height.');
+        return;
+      }
+
+      console.log(
+        `Adding top SKU at x=${newSku.xPosition}, y=${newSku.yPosition}, quantity=${newSku.quantity}`
+      );
+      canvas.topSkus.push(newSku);
+      this.recalculateTopSkuPositions(canvasIndex, baseXPosition);
+    } else {
+      let xPosition = 0;
+      let minDistance = Infinity;
+      let closestXPosition: number | null = null;
+
+      for (const rightSku of rightSkus) {
+        const dims = this.getSKUDimensions(rightSku);
+        const rightX = rightSku.xPosition ?? 0;
+        const distance = Math.abs(dropX - rightX);
+        if (distance < minDistance && distance <= tolerance) {
+          minDistance = distance;
+          closestXPosition = rightX;
+        }
+      }
+
+      if (closestXPosition !== null) {
+        xPosition = closestXPosition;
+      } else {
+        for (const s of rightSkus) {
+          const dims = this.getSKUDimensions(s);
+          xPosition = Math.max(
+            xPosition,
+            (s.xPosition ?? 0) + dims.width * (s.quantity ?? 1)
+          );
+        }
+      }
+
+      newSku.xPosition = xPosition;
+      newSku.yPosition = 0;
+
+      for (const rightSku of rightSkus) {
+        if (rightSku === newSku) continue;
+        const dims = this.getSKUDimensions(rightSku);
+        const rightX = rightSku.xPosition ?? 0;
+        if (
+          xPosition < rightX + dims.width * (rightSku.quantity ?? 1) &&
+          xPosition + newSkuDims.width * newSku.quantity > rightX
+        ) {
+          xPosition = rightX + dims.width * (rightSku.quantity ?? 1);
+          newSku.xPosition = xPosition;
+        }
+      }
+
+      if (xPosition + newSkuDims.width * newSku.quantity > canvas.width) {
+        console.warn(
+          `Cannot add right SKU: Total width=${
+            xPosition + newSkuDims.width * newSku.quantity
+          }px exceeds canvas width=${canvas.width}px`
+        );
+        alert('Cannot add right SKU: Position would exceed canvas width.');
+        return;
+      }
+
+      console.log(
+        `Adding right SKU at x=${newSku.xPosition}, y=${newSku.yPosition}, quantity=${newSku.quantity}`
+      );
+      canvas.rightSkus.push(newSku);
+      this.recalculateRightSkuPositions(canvasIndex);
+    }
+
+    this.cdr.detectChanges();
   }
 
   openModal(modalId: string): void {
@@ -188,6 +391,8 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       });
       modal.show();
       modalElement.removeAttribute('aria-hidden');
+    } else {
+      console.error(`Modal element with ID ${modalId} not found`);
     }
   }
 
@@ -202,257 +407,18 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  openSKUListModal(
-    index: number,
-    position: 'top' | 'right' = 'right',
-    skuIndex?: number
-  ): void {
-    this.selectedQuantity = 1;
-    this.searchQuery = '';
-    this.selectedStatus = 'Filter by category';
-    console.log(
-      `Opening SKUListModal: canvasIndex=${index}, position=${position}, skuIndex=${skuIndex}`
-    );
-    this.canvases[index].tempPosition = position;
-    this.canvases[index].tempSkuIndex = skuIndex;
-    this.openModal(`SKUListModal${index}`);
-  }
-
-  selectSKU(skuId: string): void {
-    this.selectedSKU = skuId;
-  }
-
-  /**
-   * Adds a new SKU to the specified canvas in either the top or right container.
-   * Checks if adding the SKU would exceed canvas height (for top SKUs) or width (for right SKUs).
-   * @param index - The index of the canvas to add the SKU to.
-   * @param data - Object containing the SKU ID, quantity, and position ('top' or 'right').
-   */
-  addSKU(
-    index: number,
-    data: { skuId: string; quantity: number; position: 'top' | 'right' }
-  ): void {
-    // Find the SKU definition from the skus array using the provided skuId
-    const sku = this.skus.find((s) => s.id === data.skuId);
-    if (!sku) {
-      // Alert user and exit if SKU is not found
-      alert('Selected SKU not found.');
-      return;
-    }
-
-    // Create a new SKU object by copying the found SKU, updating quantity and initializing positions
-    const newSku: SKU = {
-      ...sku,
-      quantity: data.quantity,
-      imageUrl: sku.imageUrl,
-      xPosition: 0,
-      yPosition: 0,
-    };
-
-    // Get dimensions of the new SKU
-    const newSkuDims = this.getSKUDimensions(newSku);
-
-    // Recalculate right SKU positions to ensure consistency before adding (affects xPosition calculations)
-    this.recalculateRightSkuPositions(index);
-
-    if (data.position === 'top') {
-      // Ensure topSkus array is initialized for the canvas
-      this.canvases[index].topSkus = this.canvases[index].topSkus || [];
-      // Get the index of the clicked SKU from temp storage (set in openSKUListModal)
-      const clickedSkuIndex = this.canvases[index].tempSkuIndex;
-
-      // Log the context for debugging
-      console.log(
-        `Adding top SKU: clickedSkuIndex=${clickedSkuIndex}, tempPosition=${this.canvases[index].tempPosition}`
-      );
-
-      // Check if a valid clicked SKU index and position context exist
-      if (clickedSkuIndex !== undefined && this.canvases[index].tempPosition) {
-        // Initialize position variables
-        let xPosition = 0;
-        let yPosition = 0;
-
-        if (this.canvases[index].tempPosition === 'right') {
-          // Adding a top SKU relative to a right SKU
-          const rightSkus = this.canvases[index].rightSkus || [];
-          if (clickedSkuIndex >= 0 && clickedSkuIndex < rightSkus.length) {
-            // Get the right SKU that was clicked
-            const clickedRightSku = rightSkus[clickedSkuIndex];
-            // Set xPosition to match the right SKU's xPosition
-            xPosition = clickedRightSku.xPosition || 0;
-            // Calculate yPosition as the top of the right SKU (height * quantity)
-            const rightDims = this.getSKUDimensions(clickedRightSku);
-            yPosition = rightDims.height * clickedRightSku.quantity;
-            // Log the right SKU details for debugging
-            console.log(
-              `Right SKU: xPosition=${xPosition}, height=${rightDims.height}, quantity=${clickedRightSku.quantity}, yPosition=${yPosition}`
-            );
-          } else {
-            // Warn and alert if the clicked index is invalid
-            console.warn(
-              `Invalid clickedSkuIndex=${clickedSkuIndex} for rightSkus.length=${rightSkus.length}`
-            );
-            alert('Cannot add top SKU: Invalid right SKU selection.');
-            return;
-          }
-        } else if (this.canvases[index].tempPosition === 'top') {
-          // Adding a top SKU relative to an existing top SKU or right SKU
-          const rightSkus = this.canvases[index].rightSkus || [];
-          let rightSkuAtPosition: SKU | undefined;
-
-          if (rightSkus.length > 0) {
-            // Try to find a right SKU at the clicked index
-            rightSkuAtPosition = rightSkus[clickedSkuIndex];
-          }
-
-          if (rightSkuAtPosition) {
-            // If a right SKU exists, align the top SKU with it
-            xPosition = rightSkuAtPosition.xPosition || 0;
-            const rightDims = this.getSKUDimensions(rightSkuAtPosition);
-            yPosition = rightDims.height * rightSkuAtPosition.quantity;
-            console.log(
-              `Right SKU at top position: xPosition=${xPosition}, height=${rightDims.height}, quantity=${rightSkuAtPosition.quantity}, yPosition=${yPosition}`
-            );
-          } else {
-            // If no right SKU, stack on top of existing top SKUs
-            const clickedSku = this.canvases[index].topSkus[clickedSkuIndex];
-            if (clickedSku) {
-              // Use the xPosition of the clicked top SKU
-              xPosition = clickedSku.xPosition || 0;
-              // Calculate total height of top SKUs at this xPosition
-              let totalHeight = 0;
-              this.canvases[index].topSkus
-                .filter((s) => s.xPosition === xPosition)
-                .forEach((s) => {
-                  const dims = this.getSKUDimensions(s);
-                  totalHeight += dims.height * s.quantity;
-                });
-              yPosition = totalHeight;
-              console.log(
-                `Top SKU stack: xPosition=${xPosition}, totalHeight=${totalHeight}, yPosition=${yPosition}`
-              );
-            } else {
-              // Warn and alert if the clicked top SKU index is invalid
-              console.warn(
-                `Invalid clickedSkuIndex=${clickedSkuIndex} for topSkus.length=${this.canvases[index].topSkus.length}`
-              );
-              alert('Cannot add top SKU: Invalid top SKU selection.');
-              return;
-            }
-          }
-        } else {
-          // Warn and alert if the tempPosition is invalid
-          console.warn(
-            `Invalid tempPosition=${this.canvases[index].tempPosition}`
-          );
-          alert('Cannot add top SKU: Invalid position context.');
-          return;
-        }
-
-        // Assign calculated positions to the new SKU
-        newSku.xPosition = xPosition;
-        newSku.yPosition = yPosition;
-
-        // Check if adding the new top SKU exceeds canvas height
-        let totalHeight = 0;
-        // Include right SKU height at xPosition, if any
-        const rightSku = this.canvases[index].rightSkus.find(
-          (s) => s.xPosition === xPosition
-        );
-        if (rightSku) {
-          const rightDims = this.getSKUDimensions(rightSku);
-          totalHeight += rightDims.height * rightSku.quantity;
-        }
-        // Sum heights of existing top SKUs at xPosition
-        this.canvases[index].topSkus
-          .filter((s) => s.xPosition === xPosition)
-          .forEach((s) => {
-            const dims = this.getSKUDimensions(s);
-            totalHeight += dims.height * s.quantity;
-          });
-        // Add height of the new SKU
-        totalHeight += newSkuDims.height * newSku.quantity;
-
-        // Compare against canvas height
-        if (totalHeight > this.canvases[index].height) {
-          console.warn(
-            `Cannot add top SKU: Total height=${totalHeight}px exceeds canvas height=${this.canvases[index].height}px`
-          );
-          alert('Cannot add top SKU: Total height would exceed canvas height.');
-          return;
-        }
-      } else {
-        // Warn and alert if no valid context is provided
-        console.warn(
-          `No clicked SKU or tempPosition: clickedSkuIndex=${clickedSkuIndex}, tempPosition=${this.canvases[index].tempPosition}`
-        );
-        alert('Cannot add top SKU: No SKU selected.');
-        return;
-      }
-
-      // Log the final position of the new top SKU
-      console.log(
-        `Adding top SKU at x=${newSku.xPosition}, y=${newSku.yPosition}`
-      );
-      // Add the new SKU to the beginning of topSkus (stacking order)
-      this.canvases[index].topSkus.unshift(newSku);
-      // Recalculate top SKU positions to stack them correctly
-      this.recalculateTopSkuPositions(index);
-    } else {
-      // Adding a right SKU
-      this.canvases[index].rightSkus = this.canvases[index].rightSkus || [];
-      // Calculate xPosition by summing the widths of existing right SKUs
-      let xPosition = 0;
-      let totalWidth = 0;
-      this.canvases[index].rightSkus.forEach((s) => {
-        const dims = this.getSKUDimensions(s);
-        xPosition += dims.width * s.quantity;
-        totalWidth += dims.width * s.quantity;
-      });
-      // Add width of the new SKU
-      totalWidth += newSkuDims.width * newSku.quantity;
-
-      // Check if adding the new right SKU exceeds canvas width
-      if (totalWidth > this.canvases[index].width) {
-        console.warn(
-          `Cannot add right SKU: Total width=${totalWidth}px exceeds canvas width=${this.canvases[index].width}px`
-        );
-        alert('Cannot add right SKU: Total width would exceed canvas width.');
-        return;
-      }
-
-      // Assign the calculated xPosition to the new SKU
-      newSku.xPosition = xPosition;
-      // Append the new SKU to rightSkus
-      this.canvases[index].rightSkus.push(newSku);
-      // Recalculate right SKU positions to ensure consistency
-      this.recalculateRightSkuPositions(index);
-    }
-
-    // Close the SKU selection modal
-    this.closeModal(`SKUListModal${index}`);
-    // Trigger change detection to update the UI
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * Removes an SKU from the specified canvas and recalculates positions.
-   * @param canvasIndex - The index of the canvas containing the SKU.
-   * @param skuIndex - The index of the SKU to remove within its container.
-   * @param container - The container type ('top' or 'right') from which to remove the SKU.
-   */
   removeSKU(
-    canvasIndex: number, // Index of the canvas
-    skuIndex: number, // Index of the SKU to remove
-    container: 'top' | 'right' // Target container
+    canvasIndex: number,
+    skuIndex: number,
+    container: 'top' | 'right'
   ): void {
-    // Log right SKU positions before deletion for debugging
+    console.log(
+      `Removing SKU: canvasIndex=${canvasIndex}, skuIndex=${skuIndex}, container=${container}`
+    );
     console.log(
       `Before deletion: rightSkus positions=`,
       this.canvases[canvasIndex].rightSkus.map((s) => `x=${s.xPosition}`)
     );
-
-    // Log top SKU positions before deletion for debugging
     console.log(
       `Before deletion: topSkus positions=`,
       this.canvases[canvasIndex].topSkus.map(
@@ -461,24 +427,42 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     );
 
     if (container === 'top') {
-      // Remove the specified top SKU from the topSkus array
-      this.canvases[canvasIndex].topSkus.splice(skuIndex, 1);
-      // Recalculate top SKU positions to shift remaining SKUs downward
-      this.recalculateTopSkuPositions(canvasIndex);
+      if (
+        skuIndex >= 0 &&
+        skuIndex < this.canvases[canvasIndex].topSkus.length
+      ) {
+        const deletedSku = this.canvases[canvasIndex].topSkus[skuIndex];
+        const xPosition = deletedSku.xPosition ?? 0;
+        this.canvases[canvasIndex].topSkus.splice(skuIndex, 1);
+        this.recalculateTopSkuPositions(canvasIndex, xPosition);
+      } else {
+        console.error(
+          `Invalid skuIndex=${skuIndex} for topSkus.length=${this.canvases[canvasIndex].topSkus.length}`
+        );
+        alert('Cannot remove top SKU: Invalid index.');
+      }
     } else {
-      // Remove the specified right SKU from the rightSkus array
-      this.canvases[canvasIndex].rightSkus.splice(skuIndex, 1);
-      // Recalculate right SKU positions to shift remaining SKUs leftward
-      this.recalculateRightSkuPositions(canvasIndex);
+      if (
+        skuIndex >= 0 &&
+        skuIndex < this.canvases[canvasIndex].rightSkus.length
+      ) {
+        const deletedSku = this.canvases[canvasIndex].rightSkus[skuIndex];
+        const xPosition = deletedSku.xPosition ?? 0;
+        this.canvases[canvasIndex].rightSkus.splice(skuIndex, 1);
+        this.recalculateRightSkuPositions(canvasIndex);
+        this.recalculateTopSkuPositions(canvasIndex, xPosition);
+      } else {
+        console.error(
+          `Invalid skuIndex=${skuIndex} for rightSkus.length=${this.canvases[canvasIndex].rightSkus.length}`
+        );
+        alert('Cannot remove right SKU: Invalid index.');
+      }
     }
 
-    // Log right SKU positions after deletion to verify shifts
     console.log(
       `After deletion: rightSkus positions=`,
       this.canvases[canvasIndex].rightSkus.map((s) => `x=${s.xPosition}`)
     );
-
-    // Log top SKU positions after deletion to verify updates
     console.log(
       `After deletion: topSkus positions=`,
       this.canvases[canvasIndex].topSkus.map(
@@ -486,85 +470,217 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       )
     );
 
-    // Trigger change detection to update the UI
     this.cdr.detectChanges();
   }
 
-  /**
-   * Recalculates yPositions for top SKUs to stack them vertically after changes.
-   * Groups top SKUs by xPosition and stacks them above the corresponding right SKU.
-   * @param canvasIndex - The index of the canvas to recalculate top SKU positions for.
-   */
-  private recalculateTopSkuPositions(canvasIndex: number): void {
-    // Ensure topSkus array is initialized
-    this.canvases[canvasIndex].topSkus =
-      this.canvases[canvasIndex].topSkus || [];
+  private recalculateTopSkuPositions(
+    canvasIndex: number,
+    affectedXPosition: number
+  ): void {
+    const canvas = this.canvases[canvasIndex];
+    canvas.topSkus = canvas.topSkus || [];
 
-    // Group top SKUs by their xPosition for vertical stacking
-    const xPositionGroups = new Map<number, SKU[]>();
-    this.canvases[canvasIndex].topSkus.forEach((sku) => {
-      // Use 0 as default xPosition if undefined
-      const xPos = sku.xPosition || 0;
-      if (!xPositionGroups.has(xPos)) {
-        xPositionGroups.set(xPos, []);
-      }
-      xPositionGroups.get(xPos)!.push(sku);
-    });
+    const affectedSkus = canvas.topSkus
+      .filter((sku) => (sku.xPosition ?? 0) === affectedXPosition)
+      .sort((a, b) => (a.yPosition ?? 0) - (b.yPosition ?? 0));
+    const unaffectedSkus = canvas.topSkus.filter(
+      (sku) => (sku.xPosition ?? 0) !== affectedXPosition
+    );
 
-    // Process each xPosition group to stack top SKUs
-    xPositionGroups.forEach((skus, xPos) => {
-      // Sort SKUs by yPosition (ascending) to maintain stacking order
-      skus.sort((a, b) => (a.yPosition || 0) - (b.yPosition || 0));
+    let totalHeight = 0;
+    const rightSku = canvas.rightSkus.find(
+      (s) => (s.xPosition ?? 0) === affectedXPosition
+    );
+    if (rightSku) {
+      const rightDims = this.getSKUDimensions(rightSku);
+      totalHeight = rightDims.height * (rightSku.quantity ?? 1);
+    } else {
+      totalHeight = 0; // Reset to 0 if no right SKU exists
+    }
 
-      // Initialize stacking height, starting at 0 or the top of the right SKU
-      let totalHeight = 0;
-      // Find the right SKU at this xPosition, if any
-      const rightSku = this.canvases[canvasIndex].rightSkus.find(
-        (s) => s.xPosition === xPos
-      );
-      if (rightSku) {
-        // If a right SKU exists, start stacking above its total height
-        const rightDims = this.getSKUDimensions(rightSku);
-        totalHeight = rightDims.height * rightSku.quantity;
-      }
-
-      // Assign new yPositions to top SKUs, stacking them vertically
-      skus.forEach((sku) => {
-        sku.yPosition = totalHeight;
-        // Add the SKU's height (height * quantity) to the stack
-        const dims = this.getSKUDimensions(sku);
-        totalHeight += dims.height * sku.quantity;
-      });
-    });
-  }
-
-  /**
-   * Recalculates xPositions for right SKUs to align them horizontally.
-   * Called after adding or removing a right SKU to shift positions leftward.
-   * @param canvasIndex - The index of the canvas to recalculate right SKU positions for.
-   */
-  private recalculateRightSkuPositions(canvasIndex: number): void {
-    // Ensure rightSkus array is initialized
-    this.canvases[canvasIndex].rightSkus =
-      this.canvases[canvasIndex].rightSkus || [];
-    // Start positioning at x=0
-    let xPosition = 0;
-    // Iterate through right SKUs to assign new xPositions
-    this.canvases[canvasIndex].rightSkus.forEach((sku) => {
-      // Assign the current xPosition to the SKU
-      sku.xPosition = xPosition;
-      // Calculate the SKU's width (width * quantity)
+    for (const sku of affectedSkus) {
       const dims = this.getSKUDimensions(sku);
-      // Increment xPosition by the SKU's total width
-      xPosition += dims.width * sku.quantity;
-    });
+      const skuHeight = dims.height * (sku.quantity ?? 1);
+      if (totalHeight + skuHeight > canvas.height) {
+        console.warn(
+          `Cannot keep SKU at x=${affectedXPosition}: Total height=${
+            totalHeight + skuHeight
+          }px exceeds canvas height=${canvas.height}px`
+        );
+        let newXPos = affectedXPosition + dims.width;
+        while (
+          canvas.rightSkus.some((s) => (s.xPosition ?? 0) === newXPos) ||
+          canvas.topSkus.some(
+            (s) => s !== sku && (s.xPosition ?? 0) === newXPos
+          )
+        ) {
+          newXPos += dims.width;
+        }
+        if (newXPos + dims.width * (sku.quantity ?? 1) > canvas.width) {
+          console.warn(
+            `Cannot reassign SKU: New xPosition=${newXPos} exceeds canvas width=${canvas.width}px`
+          );
+          canvas.topSkus = canvas.topSkus.filter((s) => s !== sku);
+          continue;
+        }
+        sku.xPosition = Math.min(
+          newXPos,
+          canvas.width - dims.width * (sku.quantity ?? 1)
+        );
+        sku.yPosition = 0;
+        totalHeight = skuHeight;
+      } else {
+        sku.yPosition = totalHeight;
+        totalHeight += skuHeight;
+      }
+    }
+
+    canvas.topSkus = [...unaffectedSkus, ...affectedSkus];
+    console.log(
+      `Recalculated topSkus at x=${affectedXPosition}:`,
+      affectedSkus.map((s) => `x=${s.xPosition}, y=${s.yPosition}`)
+    );
   }
 
-  openShelfHeightModal(index: number): void {
-    this.shelfHeightInput = this.canvases[index].height / 37.8;
-    this.selectedStatusRackHeight = 'cm';
-    this.applyToAll = false;
-    this.openModal(`shelfHeightModal${index}`);
+  private recalculateRightSkuPositions(canvasIndex: number): void {
+    const canvas = this.canvases[canvasIndex];
+    canvas.rightSkus = canvas.rightSkus || [];
+
+    canvas.rightSkus.sort((a, b) => (a.xPosition ?? 0) - (b.xPosition ?? 0));
+    let currentX = 0;
+    for (const sku of canvas.rightSkus) {
+      const dims = this.getSKUDimensions(sku);
+      const skuWidth = dims.width * (sku.quantity ?? 1);
+      if (currentX + skuWidth > canvas.width) {
+        console.warn(
+          `Right SKU at x=${currentX} exceeds canvas width=${canvas.width}px`
+        );
+        sku.xPosition = Math.max(0, canvas.width - skuWidth);
+      } else {
+        sku.xPosition = currentX;
+      }
+      currentX += skuWidth;
+    }
+
+    console.log(
+      `Recalculated rightSkus:`,
+      canvas.rightSkus.map((s) => `x=${s.xPosition}`)
+    );
+  }
+
+  saveRackWidth(data: { width: number; unit: 'cm' | 'in' }): void {
+    const widthInPx =
+      data.unit === 'in'
+        ? this.convertInToPx(data.width)
+        : this.convertCmToPx(data.width);
+    const oldWidthCm = this.rackWidthCm;
+    this.rackWidthCm = data.unit === 'in' ? data.width * 2.54 : data.width;
+    this.selectedStatusRackWidth = data.unit;
+
+    console.log(
+      `saveRackWidth: oldWidthCm=${oldWidthCm}, newWidthCm=${this.rackWidthCm}, newWidthPx=${widthInPx}`
+    );
+
+    this.updateScaleFactor();
+    this.rackWidthPx = widthInPx;
+
+    this.canvases.forEach((canvas, index) => {
+      console.log(
+        `Before updating canvas ${index}: width=${canvas.width}px, height=${canvas.height}px, rightSkus=`,
+        canvas.rightSkus.map((s) => `x=${s.xPosition}`)
+      );
+      console.log(
+        `Before updating canvas ${index}: topSkus=`,
+        canvas.topSkus.map((s) => `x=${s.xPosition}, y=${s.yPosition}`)
+      );
+
+      canvas.width = this.rackWidthPx;
+
+      // Reposition rightSkus contiguously from x=0
+      canvas.rightSkus.sort((a, b) => (a.xPosition ?? 0) - (b.xPosition ?? 0));
+      let currentX = 0;
+      for (const sku of canvas.rightSkus) {
+        const dims = this.getSKUDimensions(sku);
+        const skuWidth = dims.width * (sku.quantity ?? 1);
+        if (currentX + skuWidth > canvas.width) {
+          console.warn(
+            `Right SKU at x=${currentX} exceeds canvas width=${canvas.width}px`
+          );
+          sku.xPosition = Math.max(0, canvas.width - skuWidth);
+        } else {
+          sku.xPosition = currentX;
+        }
+        currentX += skuWidth;
+      }
+
+      // Adjust topSkus x-positions to align with rightSkus or find new positions
+      const rightSkuXPositions = new Set(
+        canvas.rightSkus.map((s) => s.xPosition ?? 0)
+      );
+      for (const sku of canvas.topSkus) {
+        const dims = this.getSKUDimensions(sku);
+        if (sku.xPosition !== undefined) {
+          if (!rightSkuXPositions.has(sku.xPosition)) {
+            let newXPos = 0; // Start at 0 if no right SKU aligns
+            while (
+              rightSkuXPositions.has(newXPos) ||
+              canvas.topSkus.some(
+                (s) => s !== sku && (s.xPosition ?? 0) === newXPos
+              )
+            ) {
+              newXPos += dims.width;
+            }
+            if (newXPos + dims.width * (sku.quantity ?? 1) > canvas.width) {
+              console.warn(
+                `Cannot reassign top SKU: New xPosition=${newXPos} exceeds canvas width=${canvas.width}px`
+              );
+              sku.xPosition = Math.max(
+                0,
+                canvas.width - dims.width * (sku.quantity ?? 1)
+              );
+            } else {
+              sku.xPosition = newXPos;
+            }
+          }
+        }
+      }
+
+      // Recalculate positions
+      this.recalculateRightSkuPositions(index);
+      const affectedXPositions = [
+        ...new Set(canvas.topSkus.map((s) => s.xPosition ?? 0)),
+      ];
+      affectedXPositions.forEach((xPos) =>
+        this.recalculateTopSkuPositions(index, xPos)
+      );
+
+      // Log DOM dimensions after render
+      setTimeout(() => {
+        const canvasElement = document.querySelector(
+          `.canvas-container:nth-child(${index + 2})`
+        );
+        if (canvasElement) {
+          const domWidth = (canvasElement as HTMLElement).offsetWidth;
+          const domHeight = (canvasElement as HTMLElement).offsetHeight;
+          console.log(
+            `Canvas ${index} DOM dimensions after render: width=${domWidth}px, height=${domHeight}px, expected: width=${canvas.width}px, height=${canvas.height}px`
+          );
+        }
+      }, 0);
+
+      console.log(
+        `After updating canvas ${index}: width=${canvas.width}px, height=${canvas.height}px, rightSkus=`,
+        canvas.rightSkus.map((s) => `x=${s.xPosition}`)
+      );
+      console.log(
+        `After updating canvas ${index}: topSkus=`,
+        canvas.topSkus.map((s) => `x=${s.xPosition}, y=${s.yPosition}`)
+      );
+    });
+
+    this.closeModal('rackWidthModal');
+    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   saveShelfHeight(data: {
@@ -577,31 +693,67 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       data.unit === 'in'
         ? this.convertInToPx(data.height)
         : this.convertCmToPx(data.height);
+    this.shelfHeightInput =
+      data.unit === 'in' ? data.height * 2.54 : data.height;
+    this.selectedStatusRackHeight = data.unit;
+
+    console.log(
+      `saveShelfHeight: index=${data.index}, heightCm=${this.shelfHeightInput}, heightPx=${heightInPx}, applyToAll=${data.applyToAll}`
+    );
 
     if (data.applyToAll) {
-      this.canvases.forEach((canvas) => {
+      this.canvases.forEach((canvas, i) => {
         canvas.height = heightInPx;
+        this.recalculateRightSkuPositions(i);
+        const affectedXPositions = [
+          ...new Set(canvas.topSkus.map((s) => s.xPosition ?? 0)),
+        ];
+        affectedXPositions.forEach((xPos) =>
+          this.recalculateTopSkuPositions(i, xPos)
+        );
       });
       this.rackHeight = heightInPx;
     } else {
       this.canvases[data.index].height = heightInPx;
+      this.recalculateRightSkuPositions(data.index);
+      const affectedXPositions = [
+        ...new Set(
+          this.canvases[data.index].topSkus.map((s) => s.xPosition ?? 0)
+        ),
+      ];
+      affectedXPositions.forEach((xPos) =>
+        this.recalculateTopSkuPositions(data.index, xPos)
+      );
     }
 
     this.closeModal(`shelfHeightModal${data.index}`);
     this.cdr.detectChanges();
   }
 
-  saveRackWidth(data: { width: number; unit: 'cm' | 'in' }): void {
-    const widthInPx =
+  addNewCanvasWithHeight(data: { height: number; unit: 'cm' | 'in' }): void {
+    const heightInPx =
       data.unit === 'in'
-        ? this.convertInToPx(data.width)
-        : this.convertCmToPx(data.width);
-    this.rackWidthPx = widthInPx;
-    this.canvases.forEach((canvas) => {
-      canvas.width = widthInPx;
-    });
+        ? this.convertInToPx(data.height)
+        : this.convertCmToPx(data.height);
+    this.shelfHeightInput =
+      data.unit === 'in' ? data.height * 2.54 : data.height;
+    this.selectedStatusRackHeight = data.unit;
 
-    this.closeModal('rackWidthModal');
+    console.log(
+      `addNewCanvasWithHeight: heightCm=${this.shelfHeightInput}, heightPx=${heightInPx}`
+    );
+
+    const newCanvas: Canvas = {
+      id: Date.now(),
+      width: this.rackWidthPx,
+      height: heightInPx,
+      topSkus: [],
+      rightSkus: [],
+    };
+    this.canvases.push(newCanvas);
+    this.rackHeight = heightInPx;
+
+    this.closeModal('newShelfModal');
     this.cdr.detectChanges();
   }
 
@@ -632,8 +784,11 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   }
 
   deleteCanvas(index: number): void {
-    if (this.canvases.length > 0) {
+    if (this.canvases.length > 1) {
       this.canvases.splice(index, 1);
+    } else {
+      console.warn('Cannot delete the last canvas');
+      alert('Cannot delete the last shelf.');
     }
     this.cdr.detectChanges();
   }
@@ -655,12 +810,26 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   }
 
   savePlanogram(): void {
+    const canvasesWithSkus = this.canvases.map((canvas) => ({
+      ...canvas,
+      topSkus: canvas.topSkus.map((sku) => ({
+        ...sku,
+        xPosition: sku.xPosition ?? 0,
+        yPosition: sku.yPosition ?? 0,
+      })),
+      rightSkus: canvas.rightSkus.map((sku) => ({
+        ...sku,
+        xPosition: sku.xPosition ?? 0,
+        yPosition: sku.yPosition ?? 0,
+      })),
+    }));
+
     const planogram: Planogram = {
       id: this.planogramId ?? Date.now(),
       title: this.title,
-      height: this.rackHeight,
+      height: this.shelfHeightInput,
       width: this.rackWidthCm,
-      canvases: this.canvases,
+      canvases: canvasesWithSkus,
     };
 
     if (this.planogramId) {
@@ -668,41 +837,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     } else {
       this.planogramService.addPlanogram(planogram);
     }
-  }
-
-  openNewShelfModal(): void {
-    this.shelfHeightInput = 300;
-    this.selectedStatusRackHeight = 'cm';
-    this.openModal('newShelfModal');
-  }
-
-  addNewCanvasWithHeight(data: { height: number; unit: 'cm' | 'in' }): void {
-    const heightInPx =
-      data.unit === 'in'
-        ? this.convertInToPx(data.height)
-        : this.convertCmToPx(data.height);
-
-    const newCanvas: Canvas = {
-      id: Date.now(),
-      width: this.rackWidthPx,
-      height: heightInPx,
-      topSkus: [],
-      rightSkus: [],
-    };
-    this.canvases.push(newCanvas);
-    this.rackHeight = heightInPx;
-
-    this.closeModal('newShelfModal');
-    this.cdr.detectChanges();
-  }
-
-  selectStatus(status: string): void {
-    this.selectedStatus = status;
-    this.dropdownOpen = false;
-  }
-
-  toggleDropDown(): void {
-    this.dropdownOpen = !this.dropdownOpen;
+    console.log('Planogram saved:', planogram);
   }
 
   selectStatusRackHeight(status: 'cm' | 'in'): void {
@@ -723,29 +858,17 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     this.dropdownOpenRackWidth = !this.dropdownOpenRackWidth;
   }
 
-  goBackToPlanogram(): void {
-    this.router.navigate(['']);
-  }
-
   getSKUDimensions(sku: SKU): { width: number; height: number } {
-    const [heightStr, widthStr] = sku.dimensions
+    const dimensions = sku.dimensions
       .split('|')
-      .map((s) => s.trim());
-    const height = parseFloat(heightStr);
-    const width = parseFloat(widthStr);
-    if (isNaN(height) || isNaN(width) || height <= 0 || width <= 0) {
-      console.warn(`Invalid dimensions for SKU ${sku.name}: ${sku.dimensions}`);
-      return { width: 100, height: 100 };
-    }
+      .map((d) => parseFloat(d.trim()));
+    const width = dimensions[0];
+    const height = dimensions[1];
+    const multiplier =
+      sku.unit === 'cm' ? this.scaleFactor : 2.54 * this.scaleFactor;
     return {
-      width:
-        sku.unit === 'cm'
-          ? this.convertCmToPx(width)
-          : this.convertInToPx(width),
-      height:
-        sku.unit === 'cm'
-          ? this.convertCmToPx(height)
-          : this.convertInToPx(height),
+      width: width * multiplier,
+      height: height * multiplier,
     };
   }
 
@@ -756,21 +879,18 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Add downloading class to hide interactive elements
     canvasContainers.forEach((container) =>
       container.classList.add('downloading')
     );
 
     try {
-      // Calculate total dimensions
       let totalHeight = 0;
       let maxWidth = 0;
       const canvases: HTMLCanvasElement[] = [];
 
-      // Capture each canvas-container as a canvas
       for (const container of Array.from(canvasContainers)) {
         const canvas = await html2canvas(container as HTMLElement, {
-          scale: 2,
+          scale: 5,
           useCORS: true,
           backgroundColor: '#ffffff',
         });
@@ -779,7 +899,6 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
         canvases.push(canvas);
       }
 
-      // Create a single canvas to combine all shelves
       const combinedCanvas = document.createElement('canvas');
       combinedCanvas.width = maxWidth;
       combinedCanvas.height = totalHeight;
@@ -790,23 +909,36 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Draw each canvas onto the combined canvas
       let currentY = 0;
       for (const canvas of canvases) {
         ctx.drawImage(canvas, 0, currentY);
         currentY += canvas.height;
       }
 
-      // Create download link
       const link = document.createElement('a');
       link.download = `planogram-${this.title || 'untitled'}-${Date.now()}.png`;
       link.href = combinedCanvas.toDataURL('image/png');
       link.click();
+    } catch (error) {
+      console.error('Error downloading planogram:', error);
+      alert('Failed to download planogram.');
     } finally {
-      // Remove downloading class
       canvasContainers.forEach((container) =>
         container.classList.remove('downloading')
       );
     }
+  }
+
+  openNewShelfModal(): void {
+    this.shelfHeightInput = 400; // Default height
+    this.selectedStatusRackHeight = 'cm';
+    this.openModal('newShelfModal');
+  }
+
+  openShelfHeightModal(index: number): void {
+    this.shelfHeightInput = this.canvases[index].height / this.scaleFactor;
+    this.selectedStatusRackHeight = 'cm';
+    this.applyToAll = false;
+    this.openModal(`shelfHeightModal${index}`);
   }
 }
