@@ -28,7 +28,7 @@
             class="btn btn-primary button"
             (click)="openModal('rackWidthModal')"
           >
-            <fa-icon [icon]="faEdit"></fa-icon> Edit Rack
+            <fa-icon [icon]="faEdit"></fa-icon> Edit Width
           </button>
         </div>
       </div>
@@ -44,6 +44,16 @@
         (toggleDropdown)="toggleDropDownRackWidth()"
         (selectUnit)="selectStatusRackWidth($event)"
       ></app-rack-width-modal>
+
+      <div class="add-canvas" *ngIf="canvases.length === 0">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          (click)="openNewShelfModal()"
+        >
+          <fa-icon [icon]="faPlus"></fa-icon> Add Shelf
+        </button>
+      </div>
 
       <div class="canvas-scroll-area">
         <ng-container *ngFor="let canvas of canvases; let i = index">
@@ -162,16 +172,6 @@
             </div>
           </div>
         </ng-container>
-      </div>
-
-      <div class="add-canvas" *ngIf="canvases.length === 0">
-        <button
-          type="button"
-          class="btn btn-primary btn-sm"
-          (click)="openNewShelfModal()"
-        >
-          <fa-icon [icon]="faPlus"></fa-icon> Add Shelf
-        </button>
       </div>
 
       <app-new-shelf-modal

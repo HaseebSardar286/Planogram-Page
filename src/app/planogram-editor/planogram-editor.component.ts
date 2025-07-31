@@ -19,6 +19,7 @@ import { SkuLibrarySidebarComponent } from '../sku-library-sidebar/sku-library-s
 import { ShelfHeightModalComponent } from '../shelf-height-modal/shelf-height-modal.component';
 import { NewShelfModalComponent } from '../new-shelf-modal/new-shelf-modal.component';
 import html2canvas from 'html2canvas';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-planogram-editor',
@@ -48,6 +49,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
   title: string = '';
   rackWidthCm: number = 40;
+  rackHeightCm: number = 50; // <-- Add this line
   rackWidthPx: number = 0;
   rackHeight: number = 0;
   canvases: Canvas[] = [];
@@ -55,7 +57,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   selectedStatusRackWidth: 'cm' | 'in' = 'cm';
   dropdownOpenRackHeight = false;
   dropdownOpenRackWidth = false;
-  shelfHeightInput: number = 10;
+  shelfHeightInput: number = 10; // Used for modal input, not main rack height
   applyToAll: boolean = false;
   planogramId: number | null = null;
   selectedStatus: string = '';
@@ -73,7 +75,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '52',
       description: 'Premium infant formula for newborns',
       unit: 'cm',
-      dimensions: '4.5 | 11.8',
+      dimensions: '4.5 x 11.8',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -84,7 +86,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '53',
       description: 'High protein nutrition shake',
       unit: 'cm',
-      dimensions: '6 | 21',
+      dimensions: '6 x 21',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -95,7 +97,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '54',
       description: 'Mango flavored fruit drink',
       unit: 'cm',
-      dimensions: '4.5 | 11.8',
+      dimensions: '4.5 x 11.8',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -106,7 +108,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '55',
       description: 'Orange flavored fruit drink',
       unit: 'cm',
-      dimensions: '4.5 | 11.8',
+      dimensions: '4.5 x 11.8',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -117,7 +119,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '56',
       description: '100% pure apple juice',
       unit: 'cm',
-      dimensions: '4.5 | 11.8',
+      dimensions: '4.5 x 11.8',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -128,7 +130,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       skuId: '57',
       description: 'Fresh squeezed orange juice',
       unit: 'cm',
-      dimensions: '4.5 | 11.8',
+      dimensions: '4.5 x 11.8',
       imageUrl: 'images/mango.jpg',
       quantity: 1,
     },
@@ -136,7 +138,8 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
   constructor(
     private planogramService: PlanogramService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -148,12 +151,15 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     };
     this.title = state.title ?? '';
     this.rackWidthCm = state.rackWidth ?? 50;
-    this.shelfHeightInput = state.height ?? 500;
-    this.rackHeight = this.convertCmToPx(this.shelfHeightInput);
-    this.planogramId = state.id ?? null;
+    this.rackHeightCm = state.height ?? 50; // <-- Use rackHeightCm for main height
+
+    this.shelfHeightInput = this.rackHeightCm; // For modal input, keep this line
 
     this.updateScaleFactor();
     this.rackWidthPx = this.convertCmToPx(this.rackWidthCm);
+    this.rackHeight = this.convertCmToPx(this.rackHeightCm); // <-- Use rackHeightCm
+
+    this.planogramId = state.id ?? null;
 
     this.canvases.push({
       id: Date.now(),
@@ -189,7 +195,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
   private updateCanvasDimensions(): void {
     this.rackWidthPx = this.convertCmToPx(this.rackWidthCm);
-    this.rackHeight = this.convertCmToPx(this.shelfHeightInput);
+    this.rackHeight = this.convertCmToPx(this.rackHeightCm); // <-- Use rackHeightCm
     this.canvases.forEach((canvas, index) => {
       canvas.width = this.rackWidthPx;
       canvas.height = this.rackHeight;
@@ -219,7 +225,9 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   }
 
   onDrop(event: DragEvent, canvasIndex: number) {
-    event.preventDefault();
+    event.preventDefault(); // Prevent default browser behavior
+
+    // 1. Extract SKU data from the drag event
     const data = event.dataTransfer?.getData('application/json');
     if (!data) {
       console.warn('No SKU data found in drag event');
@@ -228,12 +236,13 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
     let sku: SKU;
     try {
-      sku = JSON.parse(data);
+      sku = JSON.parse(data); // Parse the SKU object
     } catch (error) {
       console.error('Error parsing SKU data:', error);
       return;
     }
 
+    // 2. Get the canvas and its DOM position
     const canvas = this.canvases[canvasIndex];
     if (!canvas) {
       console.warn(`Invalid canvas index: ${canvasIndex}`);
@@ -242,20 +251,21 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
     const canvasElement = event.currentTarget as HTMLElement;
     const canvasRect = canvasElement.getBoundingClientRect();
-    const dropX = event.clientX - canvasRect.left;
-    const dropY = event.clientY - canvasRect.top;
+    const dropX = event.clientX - canvasRect.left; // X position relative to canvas
+    const dropY = event.clientY - canvasRect.top; // Y position relative to canvas
     console.log(`Drop: dropX=${dropX}, dropY=${dropY}`);
 
+    // 3. Prepare new SKU object with initial positions
     const newSku: SKU = {
       ...sku,
-      quantity: this.selectedQuantity, // Use selectedQuantity from sidebar
       xPosition: 0,
       yPosition: 0,
     };
 
     const newSkuDims = this.getSKUDimensions(newSku);
-    const tolerance = 20;
+    const tolerance = 20; // Pixel tolerance for stacking
 
+    // 4. Try to stack as a topSku above a rightSku if dropped near one
     let baseXPosition: number | null = null;
     let baseYPosition = 0;
     const rightSkus = canvas.rightSkus || [];
@@ -263,16 +273,18 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     for (const rightSku of rightSkus) {
       const dims = this.getSKUDimensions(rightSku);
       const rightX = rightSku.xPosition ?? 0;
+      // Check if dropX is within the width of a rightSku (with tolerance)
       if (
         dropX >= rightX - tolerance &&
         dropX <= rightX + dims.width + tolerance
       ) {
         baseXPosition = rightX;
-        baseYPosition = dims.height * (rightSku.quantity ?? 1);
+        baseYPosition = dims.height * (rightSku.quantity ?? 1); // Stack on top
         break;
       }
     }
 
+    // 5. If not near a rightSku, check if stacking on top of an existing topSku
     if (baseXPosition === null) {
       const topSkus = canvas.topSkus || [];
       for (const topSku of topSkus) {
@@ -288,8 +300,10 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       }
     }
 
+    // 6. If stacking vertically (topSku)
     if (baseXPosition !== null && dropY >= baseYPosition - tolerance) {
       let stackingHeight = 0;
+      // Calculate total height of stacked topSkus at this x position
       const stackedTopSkus = canvas.topSkus.filter(
         (s) => (s.xPosition ?? 0) === baseXPosition
       );
@@ -301,6 +315,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       newSku.xPosition = baseXPosition;
       newSku.yPosition = baseYPosition + stackingHeight;
 
+      // Check if adding this SKU would exceed canvas height
       if (
         newSku.yPosition + newSkuDims.height * newSku.quantity >
         canvas.height
@@ -320,10 +335,12 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       canvas.topSkus.push(newSku);
       this.recalculateTopSkuPositions(canvasIndex, baseXPosition);
     } else {
+      // 7. Otherwise, try to place as a rightSku (horizontally)
       let xPosition = 0;
       let minDistance = Infinity;
       let closestXPosition: number | null = null;
 
+      // Find the closest rightSku x position within tolerance
       for (const rightSku of rightSkus) {
         const dims = this.getSKUDimensions(rightSku);
         const rightX = rightSku.xPosition ?? 0;
@@ -337,6 +354,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       if (closestXPosition !== null) {
         xPosition = closestXPosition;
       } else {
+        // Place at the end of the last rightSku if no close one found
         for (const s of rightSkus) {
           const dims = this.getSKUDimensions(s);
           xPosition = Math.max(
@@ -349,6 +367,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       newSku.xPosition = xPosition;
       newSku.yPosition = 0;
 
+      // Check for overlap with existing rightSkus and adjust position if needed
       for (const rightSku of rightSkus) {
         if (rightSku === newSku) continue;
         const dims = this.getSKUDimensions(rightSku);
@@ -362,6 +381,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
         }
       }
 
+      // Check if adding this SKU would exceed canvas width
       if (xPosition + newSkuDims.width * newSku.quantity > canvas.width) {
         console.warn(
           `Cannot add right SKU: Total width=${
@@ -379,6 +399,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       this.recalculateRightSkuPositions(canvasIndex);
     }
 
+    // 8. Update the UI
     this.cdr.detectChanges();
   }
 
@@ -689,17 +710,10 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     applyToAll: boolean;
     index: number;
   }): void {
-    const heightInPx =
-      data.unit === 'in'
-        ? this.convertInToPx(data.height)
-        : this.convertCmToPx(data.height);
-    this.shelfHeightInput =
-      data.unit === 'in' ? data.height * 2.54 : data.height;
+    const heightInCm = data.unit === 'in' ? data.height * 2.54 : data.height;
+    const heightInPx = this.convertCmToPx(heightInCm);
+    this.shelfHeightInput = heightInCm;
     this.selectedStatusRackHeight = data.unit;
-
-    console.log(
-      `saveShelfHeight: index=${data.index}, heightCm=${this.shelfHeightInput}, heightPx=${heightInPx}, applyToAll=${data.applyToAll}`
-    );
 
     if (data.applyToAll) {
       this.canvases.forEach((canvas, i) => {
@@ -713,6 +727,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
         );
       });
       this.rackHeight = heightInPx;
+      this.rackHeightCm = heightInCm; // <-- Update main rack height
     } else {
       this.canvases[data.index].height = heightInPx;
       this.recalculateRightSkuPositions(data.index);
@@ -731,17 +746,10 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   }
 
   addNewCanvasWithHeight(data: { height: number; unit: 'cm' | 'in' }): void {
-    const heightInPx =
-      data.unit === 'in'
-        ? this.convertInToPx(data.height)
-        : this.convertCmToPx(data.height);
-    this.shelfHeightInput =
-      data.unit === 'in' ? data.height * 2.54 : data.height;
+    const heightInCm = data.unit === 'in' ? data.height * 2.54 : data.height;
+    const heightInPx = this.convertCmToPx(heightInCm);
+    this.shelfHeightInput = heightInCm;
     this.selectedStatusRackHeight = data.unit;
-
-    console.log(
-      `addNewCanvasWithHeight: heightCm=${this.shelfHeightInput}, heightPx=${heightInPx}`
-    );
 
     const newCanvas: Canvas = {
       id: Date.now(),
@@ -752,6 +760,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
     };
     this.canvases.push(newCanvas);
     this.rackHeight = heightInPx;
+    this.rackHeightCm = heightInCm; // <-- Update main rack height
 
     this.closeModal('newShelfModal');
     this.cdr.detectChanges();
@@ -784,7 +793,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
   }
 
   deleteCanvas(index: number): void {
-    if (this.canvases.length > 1) {
+    if (this.canvases.length > 0) {
       this.canvases.splice(index, 1);
     } else {
       console.warn('Cannot delete the last canvas');
@@ -838,6 +847,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
       this.planogramService.addPlanogram(planogram);
     }
     console.log('Planogram saved:', planogram);
+    this.router.navigate(['/planograms']);
   }
 
   selectStatusRackHeight(status: 'cm' | 'in'): void {
@@ -860,7 +870,7 @@ export class PlanogramEditorComponent implements OnInit, OnDestroy {
 
   getSKUDimensions(sku: SKU): { width: number; height: number } {
     const dimensions = sku.dimensions
-      .split('|')
+      .split('x')
       .map((d) => parseFloat(d.trim()));
     const width = dimensions[0];
     const height = dimensions[1];

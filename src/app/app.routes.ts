@@ -6,5 +6,6 @@ import { PlanogramEditorComponent } from './planogram-editor/planogram-editor.co
 export const routes: Routes = [
   { path: 'SKU', component: SkuComponent },
   { path: 'planogram-editor', component: PlanogramEditorComponent },
-  { path: '', component: PlanogramComponent },
+  { path: 'planograms', component: PlanogramComponent },
+  { path: '', redirectTo: 'planograms', pathMatch: 'full' },
 ];

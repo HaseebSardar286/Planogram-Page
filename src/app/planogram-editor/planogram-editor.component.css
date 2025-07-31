@@ -33,7 +33,7 @@
   justify-content: flex-start;
   width: fit-content;
   border: 1px solid #b9b8b8;
-  background-color: #7777770e;
+  background-color: #9c98980e;
   border-bottom: 5px solid rgb(150, 149, 149);
   border-radius: 5px;
   margin-top: 5px;
@@ -41,16 +41,7 @@
 }
 
 .canvas-container:hover {
-  background-color: #5a58581f;
-}
-
-.sku-placement-highlight {
-  position: absolute;
-  background-color: rgba(76, 175, 80, 0.3);
-  border: 2px dashed #4caf50;
-  z-index: 1000;
-  pointer-events: none;
-  animation: pulse 1.5s infinite alternate;
+  background-color: #b8b4b41f;
 }
 
 @keyframes pulse {
@@ -126,6 +117,7 @@ button {
   display: flex;
   align-items: flex-end;
   flex-shrink: 0;
+  margin: 1px;
 }
 
 .sku-image-wrapper {
